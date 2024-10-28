@@ -13,6 +13,8 @@ import axios from "axios";
 import Toast from "react-native-toast-message";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "@/hooks/AuthContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function SelectCategories() {
   const router = useRouter();
@@ -21,6 +23,8 @@ export default function SelectCategories() {
   const [times, setTimes] = useState([]);
   const [loading, setLoading] = useState(false);
   const [timezone, setTimezone] = useState(null);
+
+  const { mail, login, logout } = useAuth();
 
   const availableCategories = [
     "Politics",
@@ -36,10 +40,26 @@ export default function SelectCategories() {
   const availableTimes = ["Morning", "Afternoon", "Night"];
 
   useEffect(() => {
+    const checkStoredEmail = async () => {
+      try {
+        const storedEmail = await AsyncStorage.getItem("userEmail");
+        if (storedEmail) {
+          login(storedEmail); // Update context with email
+          setEmail(storedEmail);
+        }
+      } catch (error) {
+        console.error("Error checking stored email", error);
+      }
+    };
+
+    if (!email) {
+      checkStoredEmail();
+    }
+  }, [email]);
+
+  useEffect(() => {
     const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     setTimezone(userTimezone);
-    // Replace with logic to get email from AsyncStorage or context
-    setEmail("user@example.com");
   }, []);
 
   const handleCategoryChange = (category) => {
@@ -82,7 +102,7 @@ export default function SelectCategories() {
           type: "success",
           text1: "You are successfully signed up for FeedRecap!",
         });
-        router.push("/dashboard");
+        router.navigate("/(tabs)/feed");
       } else {
         Toast.show({ type: "error", text1: "Server error" });
       }

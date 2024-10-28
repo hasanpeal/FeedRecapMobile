@@ -14,9 +14,11 @@ import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import Toast from "react-native-toast-message";
+import * as AuthSession from "expo-auth-session";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@/hooks/AuthContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function SignIn() {
   const router = useRouter();
@@ -30,9 +32,12 @@ export default function SignIn() {
   const [verified, setVerified] = useState(false);
   const [load, setLoad] = useState(false);
   const [isOtpVisible, setIsOtpVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
   const otpRefs = useRef(Array(6).fill(null));
 
-  const { mail, login, logout, loading } = useAuth();
+  const { mail, login, logout } = useAuth();
+  // Define your backend OAuth endpoint
+  const googleOAuthUrl = `${process.env.EXPO_PUBLIC_SERVER}/auth/google/signin`;
 
   const showToast = (type, text1) => {
     Toast.show({
@@ -41,6 +46,58 @@ export default function SignIn() {
       position: "top",
     });
   };
+
+
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+
+    try {
+      // Start the OAuth session
+      const result = await AuthSession.startAsync({
+        authUrl: googleOAuthUrl,
+        returnUrl: AuthSession.makeRedirectUri({ useProxy: true }),
+      });
+
+      if (result.type === "success" && result.params) {
+        const { code, email } = result.params;
+
+        if (code === "0") {
+          login(email);
+
+          // Verify if the user is new or existing
+          const response = await axios.get(
+            `${process.env.EXPO_PUBLIC_SERVER}/getIsNewUser`,
+            { params: { email } }
+          );
+
+          if (response.data.code === 0) {
+            if (response.data.isNewUser) {
+              Toast.show({ type: "success", text1: "Login Successful" });
+              router.push("/newuser");
+            } else {
+              Toast.show({ type: "success", text1: "Login Successful" });
+              router.push("/(tabs)/feed");
+            }
+          } else {
+            Toast.show({ type: "error", text1: "Server Error" });
+          }
+        } else {
+          Toast.show({ type: "error", text1: "Authentication Failed" });
+        }
+      } else {
+        Toast.show({ type: "error", text1: "Authentication Cancelled" });
+      }
+    } catch (error) {
+      console.error("OAuth error:", error);
+      Toast.show({ type: "error", text1: "An error occurred during login" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+
 
   const validateForm = async () => {
     const errors = { email: "", password: "" };
@@ -67,12 +124,28 @@ export default function SignIn() {
     if (await validateForm()) {
       setLoad(true);
       try {
-        const result = await axios.post(`${process.env.EXPO_PUBLIC_SERVER}/login`, { email, password });
+        const result = await axios.post(
+          `${process.env.EXPO_PUBLIC_SERVER}/login`,
+          { email, password }
+        );
         const { code, message } = result.data;
         if (code === 0) {
           login(email);
-          showToast("success", message);
-          router.navigate("/(tabs)/feed");
+
+          const response = await axios.get(
+            `${process.env.EXPO_PUBLIC_SERVER}/getIsNewUser`,
+            {
+              params: { email: email },
+            }
+          );
+
+          if (response.data.code == 0 && response.data.isNewUser) {
+            showToast("success", "Successful login");
+            router.navigate("/newuser");
+          } else if (response.data.code == 0 && !response.data.isNewUser) {
+            showToast("success", "Successful login");
+            router.navigate("/(tabs)/feed");
+          } else showToast("Error", "Server Error");
         } else {
           showToast("error", "Login failed");
         }
@@ -86,7 +159,10 @@ export default function SignIn() {
 
   const generateOtp = async () => {
     try {
-      const result = await axios.post(`${process.env.EXPO_PUBLIC_SERVER}/sentOTP`, { email });
+      const result = await axios.post(
+        `${process.env.EXPO_PUBLIC_SERVER}/sentOTP`,
+        { email }
+      );
       setGeneratedOtp(result.data.otp);
       setIsOtpVisible(true);
     } catch (error) {
@@ -120,6 +196,7 @@ export default function SignIn() {
         setVerified(false);
       }, 3000);
       showToast("success", "OTP verified");
+      router.navigate("/signin");
     } else {
       showToast("error", "Wrong OTP");
     }
@@ -128,11 +205,6 @@ export default function SignIn() {
   const handleForgetPassword = () => {
     setIsOtpVisible(false);
     generateOtp();
-  };
-
-  const googleOauth = () => {
-    // Redirect to Google OAuth
-    window.location.href = `${process.env.EXPO_PUBLIC_SERVER}/auth/google/signin`;
   };
 
   return (
@@ -208,12 +280,15 @@ export default function SignIn() {
                   {/* Google Sign In Button */}
                   <TouchableOpacity
                     style={styles.googleButton}
-                    onPress={googleOauth}
+                    onPress={handleGoogleSignIn}
                   >
                     <Text style={styles.googleButtonText}>
                       Continue with &nbsp;
                     </Text>
                     <Ionicons name="logo-google" size={20} color="#6200ee" />
+                    {loading && (
+                      <ActivityIndicator size="small" color="#6200ee" />
+                    )}
                   </TouchableOpacity>
                 </View>
               </>

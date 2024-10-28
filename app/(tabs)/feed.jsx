@@ -12,6 +12,9 @@ import axios from "axios";
 import moment from "moment";
 import { Ionicons } from "@expo/vector-icons";
 import { FlashList } from "@shopify/flash-list";
+import { useAuth } from "@/hooks/AuthContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 
 export default function Feed() {
   const [posts, setPosts] = useState([]);
@@ -19,11 +22,29 @@ export default function Feed() {
   const [availableCategories, setAvailableCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [loading, setLoading] = useState(false);
-  const email = "pealh0320@gmail.com"; // Replace with actual email or context
+  const [email, setEmail] = useState(null);
 
-  const fetchPosts = async () => {
+  const { mail, login, logout } = useAuth();
+
+  useEffect(() => {
+    const checkStoredEmail = async () => {
+      try {
+        const storedEmail = await AsyncStorage.getItem("userEmail");
+        if (storedEmail) {
+          setEmail(storedEmail);
+          fetchPosts(storedEmail);
+        }
+      } catch (error) {
+        console.error("Error checking stored email", error);
+      }
+    };
+      checkStoredEmail();
+  }, [email]);
+
+  const fetchPosts = async (email) => {
     setLoading(true);
     try {
+      console.log(email);
       const response = await axios.get(
         `${process.env.EXPO_PUBLIC_SERVER}/api/posts`,
         { params: { email } }

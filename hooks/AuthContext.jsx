@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
 
 // Create the AuthContext
 const AuthContext = createContext();
+const router = useRouter(); // Initialize router
 
 // Custom hook to use AuthContext
 export const useAuth = () => useContext(AuthContext);
@@ -17,7 +19,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const storedEmail = await AsyncStorage.getItem("userEmail");
       if (storedEmail) {
-        setEmail(storedEmail);
+        setMail(storedEmail);
       }
     } catch (error) {
       console.error("Failed to load email from storage", error);
@@ -46,6 +48,7 @@ export const AuthProvider = ({ children }) => {
     try {
       await AsyncStorage.removeItem("userEmail");
       setMail(null);
+      router.navigate("/");
     } catch (error) {
       console.error("Failed to remove email", error);
     }

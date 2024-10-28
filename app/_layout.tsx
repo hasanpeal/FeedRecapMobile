@@ -34,7 +34,6 @@ export default function RootLayout() {
         <Stack.Screen name="signup" />
         <Stack.Screen name="signin" />
         <Stack.Screen name="newuser" />
-        <Stack.Screen name="dashboard" />
         <Stack.Screen name="(tabs)" />
       </Stack>
     </AuthProvider>

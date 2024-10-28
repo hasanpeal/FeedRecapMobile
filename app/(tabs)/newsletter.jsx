@@ -10,15 +10,22 @@ import {
 import axios from "axios";
 import RenderHTML from "react-native-render-html";
 import { Dimensions } from "react-native";
+import { useAuth } from "@/hooks/AuthContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 
 export default function newsletter() {
   const [newsletterContent, setNewsletterContent] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
-  const email = "pealh0320@gmail.com"; // Temporary email for now
+  const { mail, login, logout} = useAuth();
 
-  const fetchNewsletter = async () => {
+  useEffect(() => {
+      if(mail) fetchNewsletter(mail);
+  }, [mail]);
+
+  const fetchNewsletter = async (email) => {
+    console.log(email);
     setLoading(true);
     try {
       const response = await axios.get(
@@ -38,9 +45,6 @@ export default function newsletter() {
     }
   };
 
-  useEffect(() => {
-    fetchNewsletter();
-  }, []);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -77,7 +81,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#6200ee",
+    color: "#444",
     textAlign: "center",
     marginBottom: 20,
     fontFamily: "Font4",

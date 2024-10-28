@@ -18,6 +18,8 @@ import Toast from "react-native-toast-message";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useAuth } from "@/hooks/AuthContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function Signup() {
   const router = useRouter();
@@ -38,6 +40,8 @@ export default function Signup() {
     email: "",
     password: "",
   });
+
+  const { mail, login, logout } = useAuth();
 
   const otpRefs = useRef(Array(6).fill(null));
 
@@ -109,7 +113,6 @@ export default function Signup() {
   };
 
   const handleSignup = async () => {
-    showToast("success", "Sign up successful");
     if (await validateForm()) {
       generateOtp();
       setFlag(false);
@@ -149,19 +152,9 @@ export default function Signup() {
         );
 
         if (result.data.code === 0) {
+          login(email);
           showToast("success", "Sign up successful");
-          const response = await axios.get(
-            `${process.env.EXPO_PUBLIC_SERVER}/getIsNewUser`,
-            {
-              params: { email },
-            }
-          );
-
-          if (response.data.code === 0) {
-            router.push(response.data.isNewUser ? "NewUser" : "Dashboard");
-          } else {
-            showToast("error", "Server Error");
-          }
+          router.navigate("/newuser");
         } else {
           showToast("error", "Server error");
         }

@@ -13,7 +13,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function HomePage() {
   const router = useRouter(); // Hook from expo-router
-  const { email, login, logout, loading } = useAuth();
+  const { mail, login, logout, loading } = useAuth();
 
   useEffect(() => {
     const checkStoredEmail = async () => {
@@ -28,10 +28,10 @@ export default function HomePage() {
       }
     };
 
-    if (!email) {
+    if (!mail) {
       checkStoredEmail();
     }
-  }, [email]);
+  }, [mail]);
 
   // Display a loading spinner while checking for stored email
   if (loading) {
@@ -67,7 +67,7 @@ export default function HomePage() {
           <Text style={styles.outlinedButtonText}>Sign Up</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
+        {/* <TouchableOpacity
           style={styles.outlinedButton}
           onPress={() => router.navigate("./newuser")}
         >
@@ -93,7 +93,7 @@ export default function HomePage() {
           onPress={() => router.navigate("/(tabs)/newsletter")}
         >
           <Text style={styles.outlinedButtonText}>Newsletter</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
     </SafeAreaView>
   );
