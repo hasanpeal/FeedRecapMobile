@@ -55,7 +55,7 @@ export default function HomePage() {
 
         <TouchableOpacity
           style={styles.button}
-          onPress={() => router.navigate("./signin")}
+          onPress={() => router.navigate("/signin")}
         >
           <Text style={styles.buttonText}>Login</Text>
         </TouchableOpacity>

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -19,6 +19,15 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@/hooks/AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as WebBrowser from "expo-web-browser";
+import * as Google from "expo-auth-session/providers/google";
+
+const webClientId = "547621817342-cicl4jnlgf22vooeu4p8h5ip21d9tvr6.apps.googleusercontent.com";
+const iosClientId = "547621817342-a4dgdsrfcdiserucotlfrj5l7gbrmcnt.apps.googleusercontent.com";
+const androidClientId =
+  "547621817342-apg94ropfotnnr9n5hbgi48966v2gth7.apps.googleusercontent.com";
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function SignIn() {
   const router = useRouter();
@@ -36,8 +45,6 @@ export default function SignIn() {
   const otpRefs = useRef(Array(6).fill(null));
 
   const { mail, login, logout } = useAuth();
-  // Define your backend OAuth endpoint
-  const googleOAuthUrl = `${process.env.EXPO_PUBLIC_SERVER}/auth/google/signin`;
 
   const showToast = (type, text1) => {
     Toast.show({
@@ -47,57 +54,84 @@ export default function SignIn() {
     });
   };
 
+  const config = {
+    webClientId,
+    iosClientId,
+    androidClientId,
+  };
 
+  const [request, response, promptAsync] = Google.useAuthRequest(config);
 
-  const handleGoogleSignIn = async () => {
-    setLoading(true);
-
+  // Fetch user profile
+  const getUserProfile = async (token) => {
     try {
-      // Start the OAuth session
-      const result = await AuthSession.startAsync({
-        authUrl: googleOAuthUrl,
-        returnUrl: AuthSession.makeRedirectUri({ useProxy: true }),
-      });
+      const userInfoResponse = await axios.get(
+        "https://www.googleapis.com/oauth2/v3/userinfo",
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-      if (result.type === "success" && result.params) {
-        const { code, email } = result.params;
+      const {
+        email,
+        given_name: firstName,
+        family_name: lastName,
+      } = userInfoResponse.data;
 
-        if (code === "0") {
-          login(email);
+      // Check if the user exists on your backend
+      const emailCheck = await axios.get(
+        `${process.env.EXPO_PUBLIC_SERVER}/validateEmail`,
+        {
+          params: { email },
+        }
+      );
 
-          // Verify if the user is new or existing
-          const response = await axios.get(
-            `${process.env.EXPO_PUBLIC_SERVER}/getIsNewUser`,
-            { params: { email } }
-          );
-
-          if (response.data.code === 0) {
-            if (response.data.isNewUser) {
-              Toast.show({ type: "success", text1: "Login Successful" });
-              router.push("/newuser");
-            } else {
-              Toast.show({ type: "success", text1: "Login Successful" });
-              router.push("/(tabs)/feed");
-            }
-          } else {
-            Toast.show({ type: "error", text1: "Server Error" });
+      if (emailCheck.data.code === 0) {
+        // User exists, check if they are new
+        const newUserCheck = await axios.get(
+          `${process.env.EXPO_PUBLIC_SERVER}/getIsNewUser`,
+          {
+            params: { email },
           }
+        );
+        if (newUserCheck.data.isNewUser) {
+          login(email);
+          router.push("/newuser");
         } else {
-          Toast.show({ type: "error", text1: "Authentication Failed" });
+          login(email);
+          router.push("/(tabs)/feed");
         }
       } else {
-        Toast.show({ type: "error", text1: "Authentication Cancelled" });
+        // User does not exist, register them
+        await axios.post(`${process.env.EXPO_PUBLIC_SERVER}/register`, {
+          firstName,
+          lastName,
+          email,
+          password: "dummy_password",
+        });
+        login(email);
+        router.push("/newuser");
       }
     } catch (error) {
-      console.error("OAuth error:", error);
-      Toast.show({ type: "error", text1: "An error occurred during login" });
+      console.error("Error in user profile fetching:", error);
+      Toast.show({ type: "error", text1: "Error fetching user profile" });
     } finally {
       setLoading(false);
     }
   };
 
+  const handleToken = async() => {
+    if (response?.type === "success") {
+      const { authentication } = response;
+      const token = authentication?.accessToken;
+      console.log("Access token", token);
+      if (token) {
+        await getUserProfile(token);
+      }
+    }
+  };
 
-
+  useEffect(() => {
+    handleToken();
+  }, [response]);
 
   const validateForm = async () => {
     const errors = { email: "", password: "" };
@@ -280,7 +314,7 @@ export default function SignIn() {
                   {/* Google Sign In Button */}
                   <TouchableOpacity
                     style={styles.googleButton}
-                    onPress={handleGoogleSignIn}
+                    onPress={() => promptAsync()}
                   >
                     <Text style={styles.googleButtonText}>
                       Continue with &nbsp;
