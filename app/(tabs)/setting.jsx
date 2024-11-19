@@ -11,6 +11,7 @@ import axios from "axios";
 import Toast from "react-native-toast-message";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@/hooks/AuthContext";
+import Constants from "expo-constants";
 
 export default function setting() {
   const { mail } = useAuth(); // Retrieve stored email from context
@@ -49,20 +50,20 @@ export default function setting() {
     setLoading(true);
     try {
       const categoriesRes = await axios.get(
-        `${process.env.EXPO_PUBLIC_SERVER}/getCategories`,
+        `${Constants.expoConfig.extra.SERVER}/getCategories`,
         { params: { email: mail } }
       );
       const timesRes = await axios.get(
-        `${process.env.EXPO_PUBLIC_SERVER}/getTimes`,
+        `${Constants.expoConfig.extra.SERVER}/getTimes`,
         { params: { email: mail } }
       );
       const timezoneRes = await axios.get(
-        `${process.env.EXPO_PUBLIC_SERVER}/getTimezone`,
+        `${Constants.expoConfig.extra.SERVER}/getTimezone`,
         { params: { email: mail } }
       );
 
       const totalNewslettersRes = await axios.get(
-        `${process.env.EXPO_PUBLIC_SERVER}/getTotalNewsletters`,
+        `${Constants.expoConfig.extra.SERVER}/getTotalNewsletters`,
         { params: { email: mail } }
       );
 
@@ -81,7 +82,7 @@ export default function setting() {
     setLoading(true);
     try {
       const response = await axios.post(
-        `${process.env.EXPO_PUBLIC_SERVER}/updateCategories`,
+        `${Constants.expoConfig.extra.SERVER}/updateCategories`,
         { email: mail, categories }
       );
       setLoading(false);
@@ -99,7 +100,7 @@ export default function setting() {
     setLoading(true);
     try {
       const response = await axios.post(
-        `${process.env.EXPO_PUBLIC_SERVER}/updateTimes`,
+        `${Constants.expoConfig.extra.SERVER}/updateTimes`,
         { email: mail, time }
       );
       setLoading(false);
@@ -117,7 +118,7 @@ export default function setting() {
     setLoading(true);
     try {
       const response = await axios.post(
-        `${process.env.EXPO_PUBLIC_SERVER}/updateTimezone`,
+        `${Constants.expoConfig.extra.SERVER}/updateTimezone`,
         { email: mail, timezone }
       );
       setLoading(false);

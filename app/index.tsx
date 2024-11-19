@@ -20,7 +20,8 @@ export default function HomePage() {
       try {
         const storedEmail = await AsyncStorage.getItem("userEmail");
         if (storedEmail) {
-          login(storedEmail); // Update context with email
+          console.log('store email', storedEmail);
+          await login(storedEmail); // Update context with email
           router.replace("/(tabs)/feed"); // Redirect to dashboard
         }
       } catch (error) {
@@ -43,9 +44,8 @@ export default function HomePage() {
       </SafeAreaView>
     );
   }
-  
+
   return (
-    
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <Text style={styles.title}>FeedRecap</Text>
@@ -55,7 +55,7 @@ export default function HomePage() {
 
         <TouchableOpacity
           style={styles.button}
-          onPress={() => router.navigate("/signin")}
+          onPress={() => router.navigate("./signin")}
         >
           <Text style={styles.buttonText}>Login</Text>
         </TouchableOpacity>

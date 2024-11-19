@@ -9,8 +9,9 @@ import {
   SafeAreaView,
   ActivityIndicator,
 } from "react-native";
-import { useAuth } from "@/hooks/AuthContext";
 import axios from "axios";
+import Constants from "expo-constants";
+import { useAuth } from "@/hooks/AuthContext";
 
 export default function Account() {
   const { mail, logout } = useAuth();
@@ -18,6 +19,7 @@ export default function Account() {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState(mail || ""); // Initialize with email from context
   const [loading, setLoading] = useState(false);
+
 
   useEffect(() => {
     if (mail) {
@@ -29,7 +31,7 @@ export default function Account() {
     setLoading(true);
     try {
       const response = await axios.get(
-        `${process.env.EXPO_PUBLIC_SERVER}/getUserDetails`,
+        `${Constants.expoConfig.extra.SERVER}/getUserDetails`,
         {
           params: { email: mail },
         }
@@ -55,7 +57,7 @@ export default function Account() {
     try {
       setLoading(true);
       const response = await axios.post(
-        `${process.env.EXPO_PUBLIC_SERVER}/updateAccount`,
+        `${Constants.expoConfig.extra.SERVER}/updateAccount`,
         {
           email: mail,
           newFirstName: firstName,
@@ -79,6 +81,12 @@ export default function Account() {
   const handleContactUs = () => {
     Linking.openURL("mailto:digest@feedrecap.com");
   };
+
+  const handleLogout = async() => {
+    await logout();
+    console.log("logout success");
+  }
+
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -122,7 +130,7 @@ export default function Account() {
               <Text style={styles.buttonText}>Contact Us</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.logoutButton} onPress={logout}>
+            <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
               <Text style={styles.buttonText}>Logout</Text>
             </TouchableOpacity>
           </>

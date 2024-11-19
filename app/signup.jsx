@@ -20,6 +20,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@/hooks/AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
 
 export default function Signup() {
   const router = useRouter();
@@ -56,7 +57,7 @@ export default function Signup() {
   async function emailAlreadyExist() {
     try {
       const result = await axios.get(
-        `${process.env.EXPO_PUBLIC_SERVER}/validateEmail`,
+        `${Constants.expoConfig.extra.SERVER}/validateEmail`,
         {
           params: { email },
         }
@@ -142,7 +143,7 @@ export default function Signup() {
       try {
         setLoad(true);
         const result = await axios.post(
-          `${process.env.EXPO_PUBLIC_SERVER}/register`,
+          `${Constants.expoConfig.extra.SERVER}/register`,
           {
             firstName,
             lastName,
@@ -152,7 +153,7 @@ export default function Signup() {
         );
 
         if (result.data.code === 0) {
-          login(email);
+          await login(email);
           showToast("success", "Sign up successful");
           router.navigate("/newuser");
         } else {
@@ -173,7 +174,7 @@ export default function Signup() {
   const generateOtp = async () => {
     try {
       const result = await axios.post(
-        `${process.env.EXPO_PUBLIC_SERVER}/sentOTP`,
+        `${Constants.expoConfig.extra.SERVER}/sentOTP`,
         {
           email,
         }
@@ -422,4 +423,3 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
 });
-

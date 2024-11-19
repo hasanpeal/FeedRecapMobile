@@ -15,6 +15,7 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@/hooks/AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
 
 export default function SelectCategories() {
   const router = useRouter();
@@ -44,7 +45,8 @@ export default function SelectCategories() {
       try {
         const storedEmail = await AsyncStorage.getItem("userEmail");
         if (storedEmail) {
-          login(storedEmail); // Update context with email
+          console.log('stored email: ', storedEmail);
+          await login(storedEmail); // Update context with email
           setEmail(storedEmail);
         }
       } catch (error) {
@@ -89,7 +91,7 @@ export default function SelectCategories() {
     setLoading(true);
     try {
       const response = await axios.post(
-        `${process.env.EXPO_PUBLIC_SERVER}/updateUserPreferences`,
+        `${Constants.expoConfig.extra.SERVER}/updateUserPreferences`,
         {
           email,
           timezone,
@@ -119,9 +121,7 @@ export default function SelectCategories() {
         style={styles.container} // Ensure it covers the entire screen
       >
         <ScrollView contentContainerStyle={styles.container}>
-          <Text style={styles.title}>
-            Choose categories to subscribe to
-          </Text>
+          <Text style={styles.title}>Choose categories to subscribe to</Text>
           <View style={styles.buttonContainer}>
             {availableCategories.map((category) => (
               <TouchableOpacity

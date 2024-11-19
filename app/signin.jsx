@@ -14,22 +14,29 @@ import { StatusBar } from "expo-status-bar";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import Toast from "react-native-toast-message";
-import * as AuthSession from "expo-auth-session";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@/hooks/AuthContext";
+import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as WebBrowser from "expo-web-browser";
-import * as Google from "expo-auth-session/providers/google";
 
-const webClientId = "547621817342-cicl4jnlgf22vooeu4p8h5ip21d9tvr6.apps.googleusercontent.com";
-const iosClientId = "547621817342-a4dgdsrfcdiserucotlfrj5l7gbrmcnt.apps.googleusercontent.com";
-const androidClientId =
-  "547621817342-apg94ropfotnnr9n5hbgi48966v2gth7.apps.googleusercontent.com";
+import {
+  GoogleSignin,
+  isErrorWithCode,
+  statusCodes,
+} from "@react-native-google-signin/google-signin";
 
-WebBrowser.maybeCompleteAuthSession();
+GoogleSignin.configure({
+  webClientId: Constants.expoConfig.extra.WEB,
+  scopes: ["email", "profile"],
+  // scopes: ["https://www.googleapis.com/auth/drive.readonly"],
+  offlineAccess: false,
+  forceCodeForRefreshToken: true,
+  iosClientId: Constants.expoConfig.extra.IOS,
+  androidClientId: Constants.expoConfig.extra.ANDROID,
+});
 
-export default function SignIn() {
+export default function signin() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -54,84 +61,72 @@ export default function SignIn() {
     });
   };
 
-  const config = {
-    webClientId,
-    iosClientId,
-    androidClientId,
-  };
+ const handleGoogleSignIn = async () => {
+   try {
+     setLoading(true);
+     await GoogleSignin.hasPlayServices(); // Ensures Google Play Services are available
 
-  const [request, response, promptAsync] = Google.useAuthRequest(config);
+     const userInfo = await GoogleSignin.signIn();
+     console.log("userInfo: ", userInfo.data);
+     
+     const email = userInfo.data.user.email;
+     const firstName = userInfo.data.user.givenName;
+     const lastName = userInfo.data.user.familyName
 
-  // Fetch user profile
-  const getUserProfile = async (token) => {
-    try {
-      const userInfoResponse = await axios.get(
-        "https://www.googleapis.com/oauth2/v3/userinfo",
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+     console.log("User Info:", { email, firstName, lastName });
 
-      const {
-        email,
-        given_name: firstName,
-        family_name: lastName,
-      } = userInfoResponse.data;
+     // Validate or register the user on your backend
+     const emailCheck = await axios.get(
+       `${Constants.expoConfig.extra.SERVER}/validateEmail`,
+       {
+         params: { email },
+       }
+     );
 
-      // Check if the user exists on your backend
-      const emailCheck = await axios.get(
-        `${process.env.EXPO_PUBLIC_SERVER}/validateEmail`,
-        {
-          params: { email },
-        }
-      );
+     if (emailCheck.data.code === 0) {
+       // User exists; check if they are new
+       const newUserCheck = await axios.get(
+         `${Constants.expoConfig.extra.SERVER}/getIsNewUser`,
+         { params: { email } }
+       );
 
-      if (emailCheck.data.code === 0) {
-        // User exists, check if they are new
-        const newUserCheck = await axios.get(
-          `${process.env.EXPO_PUBLIC_SERVER}/getIsNewUser`,
-          {
-            params: { email },
-          }
-        );
-        if (newUserCheck.data.isNewUser) {
-          login(email);
-          router.push("/newuser");
-        } else {
-          login(email);
-          router.push("/(tabs)/feed");
-        }
-      } else {
-        // User does not exist, register them
-        await axios.post(`${process.env.EXPO_PUBLIC_SERVER}/register`, {
-          firstName,
-          lastName,
-          email,
-          password: "dummy_password",
-        });
-        login(email);
-        router.push("/newuser");
-      }
-    } catch (error) {
-      console.error("Error in user profile fetching:", error);
-      Toast.show({ type: "error", text1: "Error fetching user profile" });
-    } finally {
-      setLoading(false);
-    }
-  };
+       if (newUserCheck.data.isNewUser) {
+         await login(email);
+         router.navigate("/newuser");
+       } else {
+         await login(email);
+         router.navigate("/(tabs)/feed");
+       }
+     } else {
+       // Register new user
+       await axios.post(`${Constants.expoConfig.extra.SERVER}/register`, {
+         firstName,
+         lastName,
+         email,
+         password: Constants.expoConfig.extra.PASSWORD, // Set a default password or handle it per your app's logic
+       });
+       await login(email);
+       router.navigate("/newuser");
+     }
+   } catch (error) {
+     console.log("Error with Google Sign-In:", error);
+     handleSignInError(error);
+   } finally {
+     setLoading(false);
+   }
+ };
 
-  const handleToken = async() => {
-    if (response?.type === "success") {
-      const { authentication } = response;
-      const token = authentication?.accessToken;
-      console.log("Access token", token);
-      if (token) {
-        await getUserProfile(token);
-      }
-    }
-  };
-
-  useEffect(() => {
-    handleToken();
-  }, [response]);
+ const handleSignInError = (error) => {
+   if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+     Toast.show({ type: "info", text1: "Sign-in cancelled" });
+   } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+     Toast.show({ type: "error", text1: "Google Play services not available" });
+   } else if (error.code === statusCodes.IN_PROGRESS) {
+     Toast.show({ type: "error", text1: "Sign-in already in progress" });
+   } else {
+     Toast.show({ type: "error", text1: `Error with Google Sign-In: ${error}` });
+   }
+ };
 
   const validateForm = async () => {
     const errors = { email: "", password: "" };
@@ -159,15 +154,15 @@ export default function SignIn() {
       setLoad(true);
       try {
         const result = await axios.post(
-          `${process.env.EXPO_PUBLIC_SERVER}/login`,
+          `${Constants.expoConfig.extra.SERVER}/login`,
           { email, password }
         );
         const { code, message } = result.data;
         if (code === 0) {
-          login(email);
+          await login(email);
 
           const response = await axios.get(
-            `${process.env.EXPO_PUBLIC_SERVER}/getIsNewUser`,
+            `${Constants.expoConfig.extra.SERVER}/getIsNewUser`,
             {
               params: { email: email },
             }
@@ -194,7 +189,7 @@ export default function SignIn() {
   const generateOtp = async () => {
     try {
       const result = await axios.post(
-        `${process.env.EXPO_PUBLIC_SERVER}/sentOTP`,
+        `${Constants.expoConfig.extra.SERVER}/sentOTP`,
         { email }
       );
       setGeneratedOtp(result.data.otp);
@@ -243,9 +238,7 @@ export default function SignIn() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View
-        style={styles.container} // Ensure it covers the entire screen
-      >
+      <View style={styles.container}>
         <StatusBar style="dark" />
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -257,24 +250,28 @@ export default function SignIn() {
           >
             <Text style={styles.title}>FeedRecap Login</Text>
 
+            {/* Email input should always be visible */}
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={[
+                  styles.input,
+                  formErrors.email ? styles.inputError : null,
+                ]}
+                placeholder="Email"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              {formErrors.email ? (
+                <Text style={styles.errorText}>{formErrors.email}</Text>
+              ) : null}
+            </View>
+
             {!isOtpVisible ? (
+              // Password and other login fields should only show if OTP is not visible
               <>
                 <View style={styles.inputContainer}>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      formErrors.email ? styles.inputError : null,
-                    ]}
-                    placeholder="Email"
-                    value={email}
-                    onChangeText={setEmail}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                  />
-                  {formErrors.email ? (
-                    <Text style={styles.errorText}>{formErrors.email}</Text>
-                  ) : null}
-
                   <View style={styles.passwordContainer}>
                     <TextInput
                       style={[
@@ -314,7 +311,7 @@ export default function SignIn() {
                   {/* Google Sign In Button */}
                   <TouchableOpacity
                     style={styles.googleButton}
-                    onPress={() => promptAsync()}
+                    onPress={handleGoogleSignIn}
                   >
                     <Text style={styles.googleButtonText}>
                       Continue with &nbsp;
@@ -327,6 +324,7 @@ export default function SignIn() {
                 </View>
               </>
             ) : (
+              // OTP View
               <View style={styles.otpContainer}>
                 <Text style={styles.otpText}>
                   Please enter the 6-digit OTP sent to your email
@@ -347,12 +345,12 @@ export default function SignIn() {
                     />
                   ))}
                 </View>
-                {verified && <Text style={styles.errorText}>Wrong OTP</Text>}
+                {otpError && <Text style={styles.errorText}>Wrong OTP</Text>}
                 <TouchableOpacity
                   style={styles.button}
                   onPress={handleOtpVerify}
                 >
-                  <Text style={styles.buttonText}>Verify</Text>
+                  <Text style={styles.verifyText}>Verify</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -362,6 +360,7 @@ export default function SignIn() {
       </View>
     </SafeAreaView>
   );
+
 }
 
 const styles = StyleSheet.create({
@@ -432,6 +431,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     fontFamily: "Font4",
+  },
+  verifyText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "bold",
+    fontFamily: "Font4",
+    paddingHorizontal: 10
   },
   googleButton: {
     flexDirection: "row",

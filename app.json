@@ -1,0 +1,54 @@
+{
+  "expo": {
+    "name": "FeedRecap",
+    "slug": "FeedRecap",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/appIcon.png",
+    "scheme": "myapp",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/images/appIcon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.pealhasan.FeedRecap"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/foreground.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.pealhasan.FeedRecap",
+      "versionCode": 1
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.547621817342-a4dgdsrfcdiserucotlfrj5l7gbrmcnt"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "9d1b255d-4941-4e4e-9d72-54757b398a08"
+      },
+      "SERVER": "https://feedrecap.up.railway.app",
+      "WEB": "547621817342-cicl4jnlgf22vooeu4p8h5ip21d9tvr6.apps.googleusercontent.com",
+      "IOS": "547621817342-a4dgdsrfcdiserucotlfrj5l7gbrmcnt.apps.googleusercontent.com",
+      "PASSWORD": "U2FsdGVkX19snXhgiBs7L0rvdYuYX4F8oywhor2t+JI=",
+      "ANDROID": "547621817342-apg94ropfotnnr9n5hbgi48966v2gth7.apps.googleusercontent.com"
+    }
+  }
+}

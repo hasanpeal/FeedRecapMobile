@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Linking,
   SafeAreaView,
+  Platform
 } from "react-native";
 import axios from "axios";
 import moment from "moment";
@@ -14,7 +15,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { FlashList } from "@shopify/flash-list";
 import { useAuth } from "@/hooks/AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
+import Constants from "expo-constants";
+import { useFocusEffect } from "@react-navigation/native";
 
 export default function Feed() {
   const [posts, setPosts] = useState([]);
@@ -29,16 +31,27 @@ export default function Feed() {
   useEffect(() => {
     const checkStoredEmail = async () => {
       try {
-        const storedEmail = await AsyncStorage.getItem("userEmail");
+        const storedEmail = await mail;
+        console.log("stored mail: ", storedEmail);
         if (storedEmail) {
           setEmail(storedEmail);
-          fetchPosts(storedEmail);
-        }
+          await fetchPosts(storedEmail);
+        } 
       } catch (error) {
         console.error("Error checking stored email", error);
       }
     };
-      checkStoredEmail();
+    checkStoredEmail();
+  }, [mail]);
+
+  // Reset posts when logging out
+  useEffect(() => {
+    if (!email) {
+      setPosts([]);
+      setDisplayedPosts([]);
+      setAvailableCategories([]);
+      setSelectedCategory(null);
+    }
   }, [email]);
 
   const fetchPosts = async (email) => {
@@ -46,7 +59,7 @@ export default function Feed() {
     try {
       console.log(email);
       const response = await axios.get(
-        `${process.env.EXPO_PUBLIC_SERVER}/api/posts`,
+        `${Constants.expoConfig.extra.SERVER}/api/posts`,
         { params: { email } }
       );
       if (response.data.code === 0) {
@@ -72,9 +85,11 @@ export default function Feed() {
     }
   };
 
-  useEffect(() => {
-    fetchPosts();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchPosts(); // This will trigger each time the dashboard is focused
+    }, [])
+  );
 
   // Function to filter posts based on selected category
   const filterPostsByCategory = (category) => {
@@ -164,7 +179,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#ffffff",
-    paddingTop: 20,
+    paddingTop: Platform.OS === "ios" ? 10 : 40,
   },
   categoriesContainer: {
     flexDirection: "row",

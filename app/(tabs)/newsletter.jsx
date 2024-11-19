@@ -6,22 +6,23 @@ import {
   StyleSheet,
   ScrollView,
   SafeAreaView,
+  Platform,
 } from "react-native";
 import axios from "axios";
 import RenderHTML from "react-native-render-html";
 import { Dimensions } from "react-native";
 import { useAuth } from "@/hooks/AuthContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
+import Constants from "expo-constants";
 
 export default function newsletter() {
   const [newsletterContent, setNewsletterContent] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
-  const { mail, login, logout} = useAuth();
+  const { mail, login, logout } = useAuth();
 
   useEffect(() => {
-      if(mail) fetchNewsletter(mail);
+    if (mail) fetchNewsletter(mail);
   }, [mail]);
 
   const fetchNewsletter = async (email) => {
@@ -29,7 +30,7 @@ export default function newsletter() {
     setLoading(true);
     try {
       const response = await axios.get(
-        `${process.env.EXPO_PUBLIC_SERVER}/getNewsletter`,
+        `${Constants.expoConfig.extra.SERVER}/getNewsletter`,
         { params: { email } }
       );
       if (response.data.code === 0) {
@@ -44,7 +45,6 @@ export default function newsletter() {
       setLoading(false);
     }
   };
-
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -76,6 +76,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
+    paddingTop: Platform.OS === "ios" ? 10 : 40,
     backgroundColor: "#ffffff",
   },
   title: {
