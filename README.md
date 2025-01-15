@@ -118,17 +118,13 @@ FeedRecap-Mobile/
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/hasanpeal/FeedRecap-Mobile.git
+   git clone https://github.com/hasanpeal/FeedRecapMobile.git
    ```
-2. Navigate to the project directory:
-   ```bash
-   cd FeedRecap-Mobile
-   ```
-3. Install dependencies:
+2. Install dependencies:
    ```bash
    npm install
    ```
-4. Start the development server:
+3. Start the development server:
    ```bash
    npm start
    ```
